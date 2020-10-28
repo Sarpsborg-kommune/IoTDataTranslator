@@ -6,6 +6,7 @@ using Microsoft.Azure.EventHubs;
 using System.Text;
 using System.Net.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Build.Framework;
 
 namespace sarpsborgkommune.iot
 {
@@ -22,6 +23,31 @@ namespace sarpsborgkommune.iot
 
     public abstract class MessageDecoder
     {
+        protected static int Bin8Dec(byte b1)
+        {
+            int number = b1;
+            if (number > 128) number = -(256 - number);
+            else if (number == 128) number = 0;
+
+            return number;
+        }
+
+        protected static int Bin16Dec(byte b1, byte b2)
+        {
+            int number = (b1 * 256) + b2;
+            if (number > 32768) number = -(65535 - number);
+            else if (number == 32768) number = 0;
+
+            return number;
+        }
+
+        protected static int GetHexVal(char hex)
+        {
+            int value = (int)hex;
+            return value - (value < 58 ? 48 : 55);
+        }
+
+
         public abstract string Decode();
     }
 
