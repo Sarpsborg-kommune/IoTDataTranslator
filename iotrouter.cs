@@ -15,7 +15,7 @@ namespace sarpsborgkommune.iot
         private static HttpClient client = new HttpClient();
 
         [FunctionName("IoTRouter")]
-        public static void Run([IoTHubTrigger("messages/events", Connection = "IoTHubConnection")]EventData message, ILogger log)
+        public static void Run([IoTHubTrigger("messages/events", Connection = "IoTHubConnection")]EventData message, Microsoft.Extensions.Logging.ILogger log)
         {
             log.LogInformation($"C# IoT Hub trigger function processed a message: {Encoding.UTF8.GetString(message.Body.Array)}");
         }
