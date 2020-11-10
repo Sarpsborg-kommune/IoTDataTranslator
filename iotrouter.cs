@@ -1,54 +1,115 @@
-using IoTHubTrigger = Microsoft.Azure.WebJobs.EventHubTriggerAttribute;
-
+using System;
+using System.Text;
+using System.Text.Json;
+using System.Net.Http;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.EventHubs;
-using System.Text;
-using System.Net.Http;
+using Microsoft.Azure.Devices;
 using Microsoft.Extensions.Logging;
-using Microsoft.Build.Framework;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.IdentityModel.Tokens;
+
+
+using IoTHubTrigger = Microsoft.Azure.WebJobs.EventHubTriggerAttribute;
+
 
 namespace sarpsborgkommune.iot
 {
     public static class IoTRouter
     {
         private static HttpClient client = new HttpClient();
+        private static IMemoryCache _memcache = new MemoryCache(new MemoryCacheOptions());
+        private static Random random = new Random();
+
+        private static string IotHubConnection = Environment.GetEnvironmentVariable("IoTHubConnection");
+
+        public async static Task<dynamic> GetTags(string ConnectionString, string id)
+        {
+            RegistryManager registryManager = RegistryManager.CreateFromConnectionString(ConnectionString);
+            var twin = await registryManager.GetTwinAsync(id);
+            
+            return JsonSerializer.Deserialize<Dictionary<string, object>>(twin.Tags.ToJson());
+        }
 
         [FunctionName("IoTRouter")]
-        public static void Run([IoTHubTrigger("messages/events", Connection = "IoTHubConnection")]EventData message, Microsoft.Extensions.Logging.ILogger log)
+        public async static Task Run([IoTHubTrigger("messages/events", Connection = "IoTHubEndpoint")]EventData[] messages, Microsoft.Extensions.Logging.ILogger log)
         {
-            log.LogInformation($"C# IoT Hub trigger function processed a message: {Encoding.UTF8.GetString(message.Body.Array)}");
+            foreach (var message in messages)
+            {
+                string deviceId = message.SystemProperties["iothub-connection-device-id"].ToString();
+                dynamic cacheEntry, twinTags;
+                string sensorDecoder = null;
+                var iotData = JsonSerializer.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(message.Body.Array));
+                int retryCount = 0;
+                
+
+                log.LogInformation($"Received IoT Message:");
+                log.LogInformation(Encoding.UTF8.GetString(message.Body.Array));
+                if (iotData["cmd"].ToString() == "rx")
+                {
+                    while (true)
+                    {
+                        try
+                        {
+                            log.LogInformation($"IoT Message is RX and will be processed");
+
+                            if (_memcache.TryGetValue(deviceId, out cacheEntry))
+                            {
+                                log.LogInformation("Cache HIT (Twin)");
+                                using (JsonDocument doc = JsonDocument.Parse(cacheEntry))
+                                {
+                                    
+                                    sensorDecoder = doc.RootElement.GetProperty("deviceType").ToString();
+                                }
+                                //log.LogInformation($"Cache: {twinTags}");
+                                // sensorDecoder = twinTags["deviceType"]?.ToString() ?? string.Empty;  // This fails for big time test http://zetcode.com/csharp/json/
+                                log.LogInformation($"Decoder: {sensorDecoder}");
+                                
+                            }
+                            else
+                            {
+                                twinTags = await GetTags(IotHubConnection, deviceId);
+                                sensorDecoder = twinTags["deviceType"]?.ToString() ?? string.Empty;
+                                log.LogInformation($"Decoder: {sensorDecoder}");
+
+                                if (!string.IsNullOrEmpty(sensorDecoder))
+                                {
+                                    string data = JsonSerializer.Serialize(twinTags);
+                                    var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(10));
+                                    _memcache.Set(deviceId, data, cacheEntryOptions);
+                                    log.LogInformation("Cache MISS (Twin): Caching Twin Data:");
+                                    log.LogInformation($"{deviceId} : {data}");
+                                }
+
+                            }
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            retryCount++;
+                            if (retryCount > 4)
+                                throw new Exception("Run failed (memorycache/IoTHub connection error).", ex);
+                            await Task.Delay(random.Next(1000, 2000));
+                        }
+                    }
+                }
+
+                
+               
+            }
+            
         }
     }
 
     public abstract class MessageDecoder
     {
-        protected static int Bin8Dec(byte b1)
-        {
-            int number = b1;
-            if (number > 128) number = -(256 - number);
-            else if (number == 128) number = 0;
-
-            return number;
-        }
-
-        protected static int Bin16Dec(byte b1, byte b2)
-        {
-            int number = (b1 * 256) + b2;
-            if (number > 32768) number = -(65535 - number);
-            else if (number == 32768) number = 0;
-
-            return number;
-        }
-
-        protected static int GetHexVal(char hex)
-        {
-            int value = (int)hex;
-            return value - (value < 58 ? 48 : 55);
-        }
+        
 
 
-        public abstract string Decode();
+        public abstract Dictionary<string, object> Decode(byte[] data);
     }
 
     public class IoTMessage
