@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace sarpsborgkommune.iot
+namespace Sarpsborgkommune.IoT.IoTDataTranslator
 {
     // See https://www.elsys.se/en/elsys-payload/
     public enum ElsysMeasurementType : byte
@@ -47,13 +47,13 @@ namespace sarpsborgkommune.iot
     {
         public int x;
         public int y;
-        public int z; 
+        public int z;
     }
 
     public class Gps
     {
         public int lat;
-        public int lon; 
+        public int lon;
     }
 
     public class IrTemp
@@ -107,7 +107,7 @@ namespace sarpsborgkommune.iot
 
         public ElsysMessage(byte[] data)
         {
-            for (int counter = 0; counter < data.Length; counter ++)
+            for (int counter = 0; counter < data.Length; counter++)
             {
                 switch (data[counter])
                 {
@@ -147,7 +147,7 @@ namespace sarpsborgkommune.iot
                         counter += 2;
                         break;
                     case (byte)ElsysMeasurementType.GPS:
-                        // The coordinates must be converted from a signed 24 bit number to int a 
+                        // The coordinates must be converted from a signed 24 bit number to int a
                         // signed 32 bit number (= int)
                         this.gps = new Gps();
                         this.gps.lat = data[counter + 1] | data[counter + 2] << 8 | data[counter + 4] << 16;
@@ -281,7 +281,7 @@ namespace sarpsborgkommune.iot
                     }
                     output += "\n";
                 }
-                    
+
             }
             if (!(this.pressure is null)) output += $"Pressure: {this.pressure}hPa\n";
             if (!(this.sound is null)) output += $"Sound: Peak:{this.sound.peak} Average:{this.sound.avg}\n";

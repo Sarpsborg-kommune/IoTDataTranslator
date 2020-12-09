@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
 
-namespace sarpsborgkommune.iot
+namespace Sarpsborgkommune.IoT.IoTDataTranslator
 {
     public static class helperfunctions
     {

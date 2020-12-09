@@ -1,4 +1,0 @@
-﻿Management rundt det å få en sensor i gang. Vedlikehold, 
-Azure Provisioning Service - sjekk hva dette er.
-
-Bruke mobil - scanne qr koden.
