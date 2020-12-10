@@ -8,7 +8,8 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
     // Documentation: https://docs.loriot.io/display/LNS/API+Data+Format
     class LoriotMessageUplink
     {
-        // Commented out prercieved unneeded class members to minimize object
+        // Commented out percieved unneeded class members to minimize object size this should
+        // make this a lean, mean codingmachine :-)
         public string cmd { get; set; }         // string: identifies message type, always 'rx' for uplink data message
         // public int seqno { get; set; }          // number: must correspond to the latest FCnt reported by the 'txd' message
         public string EUI { get; set; }         // string: device EUI, 16 hex digits (without dashes)

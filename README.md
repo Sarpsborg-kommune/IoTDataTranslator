@@ -23,7 +23,7 @@ MemoryCache to store DeviceTwin data.
 ## Installation
 
 Eventually the function will be deployed from GitHub directly to Azure. You must also add the
-following Azure environment variables: `IoTHubConnection IoTHubEndpoint EventHubConnection'
+following Azure environment variables: ```IoTHubConnection IoTHubEndpoint EventHubConnection```
 corresponding to the connection information for the Azure IoTHub data, devicetwin data and EventHub
 respectively.
 
