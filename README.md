@@ -4,8 +4,8 @@
 > Note that the libraries/packages (declared in the .csproj) file must use versions compatible
 > with .NET Core 3.1
 
-> :information*source: I've started to work under the assumption that code should be
-> self-explanatory. The code should not contain things that is so \_clever* that an explanation is
+> :information_source: I've started to work under the assumption that code should be
+> self-explanatory. The code should not contain things that is so \_clever\* that an explanation is
 > needed. You would probably not remember or understad what you have done after 1 year. Such code if
 > used will be explained ;-)
 
