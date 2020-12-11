@@ -26,56 +26,57 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
         private static string IotHubConnection = Environment.GetEnvironmentVariable("IoTHubConnection");
 
         [FunctionName("IoTDataTranslator")]
-        public async static Task Run([IoTHubTrigger("messages/events", Connection = "IoTHubEndpoint")] EventData[] messages, ILogger log)
+        public async static Task Run([IoTHubTrigger("messages/events",
+            Connection = "IoTHubEndpoint")] EventData[] messages,
+            [EventHub("main", Connection = "EventHubEndpoint")] IAsyncCollector<string> output,
+            ILogger log)
         {
             foreach (var message in messages)
             {
                 string deviceId = message.SystemProperties["iothub-connection-device-id"].ToString();
                 dynamic cacheEntry, twinTags;
                 string sensorDecoder = null;
-                // var iotData = JsonSerializer.Deserialize<Dictionary<string, object>>(Encoding.UTF8.GetString(message.Body.Array));
-                var iotData = JsonSerializer.Deserialize<LoriotMessageUplink>(Encoding.UTF8.GetString(message.Body.Array));
                 int retryCount = 0;
-                log.LogWarning($"ID: {iotData.EUI}");
+                var iotData = JsonSerializer.Deserialize<LoriotMessageUplink>(Encoding.UTF8.GetString(message.Body.Array));
+                IoTMessage iotmessage = new IoTMessage();
+
                 if (iotData.cmd == "rx")
                 {
                     while (true)
                     {
                         try
                         {
-                            log.LogInformation($"IoT Message is RX and will be processed");
-
                             if (_memcache.TryGetValue(deviceId, out cacheEntry))
                             {
-                                log.LogInformation("Cache HIT (Twin)");
                                 using (JsonDocument doc = JsonDocument.Parse(cacheEntry))
                                 {
                                     sensorDecoder = doc.RootElement.GetProperty("deviceType").ToString();
                                 }
-                                //log.LogInformation($"Cache: {twinTags}");
-                                // sensorDecoder = twinTags["deviceType"]?.ToString() ?? string.Empty;  // This fails for big time test http://zetcode.com/csharp/json/
-                                log.LogInformation($"Decoder: {sensorDecoder}");
-                                log.LogInformation($"{JsonSerializer.Serialize(iotData)}");
-
                             }
                             else
                             {
                                 twinTags = await GetTags(IotHubConnection, deviceId);
                                 sensorDecoder = twinTags["deviceType"]?.ToString() ?? string.Empty;
-                                log.LogInformation($"Decoder: {sensorDecoder}");
 
                                 if (!string.IsNullOrEmpty(sensorDecoder))
                                 {
                                     string data = JsonSerializer.Serialize(twinTags);
-                                    var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(10));
+                                    var cacheEntryOptions = new MemoryCacheEntryOptions()
+                                        .SetSlidingExpiration(TimeSpan.FromMinutes(30));
                                     _memcache.Set(deviceId, data, cacheEntryOptions);
-                                    log.LogInformation("Cache MISS (Twin): Caching Twin Data:");
-                                    log.LogInformation($"{deviceId} : {data}");
-                                    log.LogInformation($"{JsonSerializer.Serialize(iotData)}");
+                                }
+                                else
+                                {
+                                    throw new ArgumentNullException();
                                 }
 
                             }
                             break;
+                        }
+                        catch (ArgumentNullException ex)
+                        {
+                            log.LogError($"deviceType missing from DeviceTwin for {deviceId}");
+                            throw new Exception("deviceType missing from DeviceTwin", ex);
                         }
                         catch (Exception ex)
                         {
@@ -85,8 +86,27 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
                             await Task.Delay(random.Next(1000, 2000));
                         }
                     }
+
+                    switch (sensorDecoder)
+                    {
+                        case "elsys":
+                            iotmessage.id = iotData.EUI;
+                            iotmessage.deviceType = sensorDecoder;
+                            iotmessage.receivers = null;
+                            iotmessage.timeStamp = DateTimeOffset.FromUnixTimeMilliseconds(iotData.ts).DateTime;
+                            iotmessage.data = new ElsysMessage(helperfunctions.StringToByteArray(iotData.data));
+                            log.LogInformation($"Json Data: {JsonSerializer.Serialize(iotmessage, new JsonSerializerOptions { IgnoreNullValues = true })}");
+
+                            break;
+                        default:
+                            log.LogError($"Sensordecoder for deviceType {sensorDecoder} is not implemented");
+                            break;
+                    }
                 }
+                await output.AddAsync(JsonSerializer.Serialize(iotmessage, new JsonSerializerOptions { IgnoreNullValues = true }));
+
             }
+            await output.FlushAsync();
         }
 
         public async static Task<dynamic> GetTags(string ConnectionString, string id)
@@ -100,7 +120,6 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
 
     public abstract class MessageDecoder
     {
-
         public abstract Dictionary<string, object> Decode(byte[] data);
     }
 }
