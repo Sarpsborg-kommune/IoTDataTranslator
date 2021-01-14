@@ -112,9 +112,12 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
                 switch (data[counter])
                 {
                     case (byte)ElsysMeasurementType.TEMP:
-                        string tmptemp = (data[counter + 1] << 8 | data[counter + 2]).ToString();
-                        string tmptempconv = tmptemp.Remove(tmptemp.Length - 1) + "." + tmptemp[tmptemp.Length - 1].ToString();
-                        this.temp = float.Parse(tmptempconv, CultureInfo.InvariantCulture.NumberFormat);
+
+                        // string tmptemp = (data[counter + 1] << 8 | data[counter + 2]).ToString();
+                        // string tmptempconv = tmptemp.Remove(tmptemp.Length - 1) + "." + tmptemp[tmptemp.Length - 1].ToString();
+                        // this.temp = float.Parse(tmptempconv, CultureInfo.InvariantCulture.NumberFormat);
+                        // UInt15 tmp = (UInt16)(data[counter+1] << 8 | data[counter+2])
+                        this.temp = helperfunctions.Bin16Dec(data[counter + 1], data[counter + 2]) / (float)10.0;
                         counter += 2;
                         break;
                     case (byte)ElsysMeasurementType.RH:

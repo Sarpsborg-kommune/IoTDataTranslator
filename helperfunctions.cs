@@ -7,8 +7,8 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
         public static int Bin8Dec(byte b1)
         {
             int number = b1;
-            if (number > 128) number = -(256 - number);
-            else if (number == 128) number = 0;
+            if (number >= 128) number = -(256 - number);
+            //else if (number == 128) number = 0;
 
             return number;
         }
@@ -16,8 +16,8 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
         public static int Bin16Dec(byte b1, byte b2)
         {
             int number = (b1 * 256) + b2;
-            if (number > 32768) number = -(65535 - number);
-            else if (number == 32768) number = 0;
+            if (number >= 32768) number = -(65535 - number);
+            //else if (number == 32768) number = 0;
 
             return number;
         }
