@@ -76,7 +76,7 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
 
     public class ElsysMessage
     {
-        public float? temp { get; }
+        public double? temp { get; }
         public int? rh { get; }
         public Acc acc { get; }
         public int? light { get; }
@@ -87,7 +87,7 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
         public Gps gps { get; }
         public int? pulse1 { get; }
         public int? pulse1_abs { get; }
-        public float? ext_temp1 { get; }
+        public double? ext_temp1 { get; }
         public bool? ext_digital { get; }
         public int? ext_distance { get; }
         public int? acc_motion { get; }
@@ -100,7 +100,7 @@ namespace Sarpsborgkommune.IoT.IoTDataTranslator
         public int? pulse2 { get; }
         public int? pulse2_abs { get; }
         public int? analog2 { get; }
-        public float? ext_temp2 { get; }
+        public double? ext_temp2 { get; }
         public bool? ext_digital2 { get; }
         public int? ext_analog_uv { get; }
         public byte[] debug { get; }
